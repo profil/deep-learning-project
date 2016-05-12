@@ -9,6 +9,8 @@ OFFSET = 16
 MARGIN = 4
 WIDTH = (MARGIN + CARDWIDTH) * 7 - MARGIN
 HEIGHT = (7 + 14) * OFFSET + 2 * (MARGIN + CARDHEIGHT) - 3
+CURSOR_COLOR = pygame.Color(0, 0, 255)
+CURSOR_SELECTED_COLOR = pygame.Color(255, 0, 255)
 
 class Card:
     def __init__(self, suit, value, hidden=True):
@@ -40,9 +42,9 @@ class Deck:
         cards = self.deck[:3]
         del self.deck[:3]
 
+        self.showing = cards
         if cards:
-            self.showed.append(self.showing)
-            self.showing = cards
+            self.showed.extend(self.showing)
         else:
             self.deck = self.showed
             self.showed = []
@@ -53,6 +55,8 @@ class Solitaire:
         self.cards = cards
         self.backside = backside
         self.bottom = bottom
+        self.cursor = (0, 0)
+        self.selected = False
         self.reset()
 
     def draw(self):
@@ -75,7 +79,13 @@ class Solitaire:
                 self.screen.blit(card, ((MARGIN + CARDWIDTH) * i, (2 * MARGIN + CARDHEIGHT) + y))
                 y += OFFSET
 
-        pygame.draw.rect(self.screen, 1, pygame.Rect(0, (2*MARGIN + CARDHEIGHT), CARDWIDTH, CARDHEIGHT), 2)
+        pygame.draw.rect(self.screen,
+                         CURSOR_COLOR,
+                         pygame.Rect((MARGIN + CARDWIDTH) * 3,
+                                     OFFSET + (2 * MARGIN + CARDHEIGHT),
+                                     CARDWIDTH,
+                                     CARDHEIGHT + 2 * OFFSET),
+                         2)
 
     def reset(self):
         self.deck = Deck()
@@ -100,12 +110,15 @@ def init_game():
     pygame.display.update()
     pygame.time.delay(1000)
 
-    solitaire.deck.deal()
-    solitaire.draw()
+    for i in range(2):
+        background.fill((0, 130, 0))
 
-    screen.blit(background, (0, 0))
-    pygame.display.update()
-    pygame.time.delay(1000)
+        solitaire.deck.deal()
+        solitaire.draw()
+
+        screen.blit(background, (0, 0))
+        pygame.display.update()
+        pygame.time.delay(2000)
 
 def main():
     init_game()
