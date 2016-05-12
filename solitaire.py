@@ -19,7 +19,9 @@ class Card:
 class Deck:
     def __init__(self):
         cards = []
-        fill(cards)
+        for suit in range(4):
+            for value in range(1, 14):
+                cards.append(Card(suit, value))
         shuffle(cards)
 
         self.rows = [[] for i in range(7)]
@@ -44,12 +46,6 @@ class Deck:
         else:
             self.deck = self.showed
             self.showed = []
-
-
-def fill(cards):
-    for suit in range(4):
-        for value in range(1, 14):
-            cards.append(Card(suit, value))
 
 class Solitaire:
     def __init__(self, screen, cards, backside, bottom):
