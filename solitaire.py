@@ -54,7 +54,7 @@ class Deck:
             self.showed = []
 
     def cards_in_stack(self, stack):
-        return len(self.rows[stack])
+        return self.rows[stack]
 
 class Cursor:
     def __init__(self, x, y):
@@ -128,7 +128,9 @@ class Solitaire:
 
     def move_up(self):
         if (not self.selector.selected and
-            self.cursor.cards < self.cards_in_stack() and self.cursor.y == 1):
+            self.cursor.cards < len(self.cards_in_stack()) and
+            self.cursor.y == 1 and
+            not self.cards_in_stack()[-(self.cursor.cards + 1)].hidden):
             self.cursor.cards += 1
         else:
             if not self.deck.showing and (self.cursor.x == 1 or self.cursor.x == 2):
@@ -156,7 +158,7 @@ class Solitaire:
     def draw_cursor(self):
         y = self.cursor.y * (2 * MARGIN + CARDHEIGHT)
         if self.cursor.y == 1:
-            y += OFFSET * max(self.cards_in_stack() - self.cursor.cards, 0)
+            y += OFFSET * max(len(self.cards_in_stack()) - self.cursor.cards, 0)
 
         x = self.cursor.x * (MARGIN + CARDWIDTH)
         if self.cursor.y == 0 and self.cursor.x == 1:
