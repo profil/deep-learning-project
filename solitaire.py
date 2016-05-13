@@ -103,7 +103,7 @@ class Solitaire:
 
         self.draw_cursor()
 
-    def move_right(self):
+    def right(self):
         if self.cursor.x == 0 and self.cursor.y == 0 and not self.deck.showing:
             self.cursor.x = 3
         elif self.cursor.x == 1 and self.cursor.y == 0:
@@ -112,7 +112,7 @@ class Solitaire:
             self.cursor.x = min(self.cursor.x + 1, 6)
         self.cursor.cards = 1
 
-    def move_left(self):
+    def left(self):
         if self.cursor.x == 3 and self.cursor.y == 0 and not self.deck.showing:
             self.cursor.x = 0
         elif self.cursor.x == 3 and self.cursor.y == 0:
@@ -121,12 +121,12 @@ class Solitaire:
             self.cursor.x = max(self.cursor.x - 1, 0)
             self.cursor.cards = 1
 
-    def move_down(self):
+    def down(self):
         if self.cursor.y == 1:
             self.cursor.cards = max(self.cursor.cards - 1, 1)
         self.cursor.y = 1
 
-    def move_up(self):
+    def up(self):
         if (not self.selector.selected and
             self.cursor.cards < len(self.cards_in_stack()) and
             self.cursor.y == 1 and
@@ -195,13 +195,13 @@ def init_game():
         event = pygame.event.wait()
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_LEFT:
-                solitaire.move_left()
+                solitaire.left()
             elif event.key == pygame.K_RIGHT:
-                solitaire.move_right()
+                solitaire.right()
             elif event.key == pygame.K_UP:
-                solitaire.move_up()
+                solitaire.up()
             elif event.key == pygame.K_DOWN:
-                solitaire.move_down()
+                solitaire.down()
             elif event.key == pygame.K_SPACE:
                 solitaire.select()
             background.fill((0, 130, 0))
