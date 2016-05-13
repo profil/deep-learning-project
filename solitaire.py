@@ -19,6 +19,9 @@ class Card:
         self.value = value
         self.hidden = hidden
 
+    def __repr__(self):
+        return "%s %s Hidden: %s" % (self.suit, self.value, self.hidden)
+
 class Deck:
     def __init__(self):
         cards = []
@@ -59,6 +62,11 @@ class Cursor:
         self.y = y
         self.cards = 1
 
+class Selecter:
+    def __init__(self):
+        self.from_stack = None
+        self.cards = 0
+        self.selected = False
 
 class Solitaire:
     def __init__(self, screen, cards, backside, bottom):
@@ -67,7 +75,7 @@ class Solitaire:
         self.backside = backside
         self.bottom = bottom
         self.cursor = Cursor(0, 1)
-        self.selected = False
+        self.selector = Selecter()
         self.reset()
 
 
@@ -101,27 +109,39 @@ class Solitaire:
             self.cursor.x = 3
         else:
             self.cursor.x = min(self.cursor.x + 1, 6)
+        self.cursor.cards = 1
 
     def move_left(self):
         if self.cursor.x == 3 and self.cursor.y == 0: # == 0 for clearance
             self.cursor.x = 1
         else:
             self.cursor.x = max(self.cursor.x - 1, 0)
+            self.cursor.cards = 1
 
     def move_down(self):
         if self.cursor.y == 1:
             self.cursor.cards = max(self.cursor.cards - 1, 1)
-
         self.cursor.y = 1
 
     def move_up(self):
-
-        if self.cursor.cards < self.cards_in_stack():
+        if self.cursor.cards < self.cards_in_stack() and self.cursor.y == 1:
             self.cursor.cards += 1
         else:
-            if self.cursor.x != 2:
+            if self.cursor.x != 2: # The gap between the main deck and the four goal piles
                 self.cursor.y = 0
             self.cursor.cards = 1
+
+    def select(self):
+        #TODO: Restrictions and make it work for not only between stacks
+        if self.selector.selected:
+            selected_cards = self.deck.rows[self.selector.from_stack][-self.selector.cards:]
+            self.deck.rows[self.cursor.x] = self.deck.rows[self.cursor.x] + selected_cards
+            del self.deck.rows[self.selector.from_stack][-self.selector.cards:]
+        else:
+            self.selector.from_stack = self.cursor.x
+            self.selector.cards = self.cursor.cards
+
+        self.selector.selected = not self.selector.selected
 
     def reset(self):
         self.deck = Deck()
@@ -129,10 +149,11 @@ class Solitaire:
     def draw_cursor(self):
         y = self.cursor.y * (2 * MARGIN + CARDHEIGHT)
         if self.cursor.y: # == 1
-            y += OFFSET * (self.cards_in_stack() - self.cursor.cards)
+            y += OFFSET * max(self.cards_in_stack() - self.cursor.cards, 0)
 
         pygame.draw.rect(self.screen,
-                         CURSOR_COLOR,
+                         # Might not be the intended way of using the cursor color, but this WFN
+                         CURSOR_SELECTED_COLOR if self.selector.selected else CURSOR_COLOR,
                          pygame.Rect((MARGIN + CARDWIDTH) * self.cursor.x,
                          y,
                          CARDWIDTH,
@@ -169,6 +190,8 @@ def init_game():
                 solitaire.move_up()
             elif event.key == pygame.K_DOWN:
                 solitaire.move_down()
+            elif event.key == pygame.K_SPACE:
+                solitaire.select()
             background.fill((0, 130, 0))
 
             solitaire.deck.deal()
