@@ -105,14 +105,14 @@ class Solitaire:
         self.draw_cursor()
 
     def move_right(self):
-        if self.cursor.x == 1 and self.cursor.y == 0: # == 0 for clearance
+        if self.cursor.x == 1 and self.cursor.y == 0:
             self.cursor.x = 3
         else:
             self.cursor.x = min(self.cursor.x + 1, 6)
         self.cursor.cards = 1
 
     def move_left(self):
-        if self.cursor.x == 3 and self.cursor.y == 0: # == 0 for clearance
+        if self.cursor.x == 3 and self.cursor.y == 0:
             self.cursor.x = 1
         else:
             self.cursor.x = max(self.cursor.x - 1, 0)
@@ -127,8 +127,9 @@ class Solitaire:
         if self.cursor.cards < self.cards_in_stack() and self.cursor.y == 1:
             self.cursor.cards += 1
         else:
-            if self.cursor.x != 2: # The gap between the main deck and the four goal piles
-                self.cursor.y = 0
+            if self.cursor.x == 2: # The gap between the main deck and the four goal piles
+                self.cursor.x = 1
+            self.cursor.y = 0
             self.cursor.cards = 1
 
     def select(self):
@@ -148,16 +149,19 @@ class Solitaire:
 
     def draw_cursor(self):
         y = self.cursor.y * (2 * MARGIN + CARDHEIGHT)
-        if self.cursor.y: # == 1
+        if self.cursor.y == 1:
             y += OFFSET * max(self.cards_in_stack() - self.cursor.cards, 0)
 
+        x = self.cursor.x * (MARGIN + CARDWIDTH)
+        if self.cursor.y == 0 and self.cursor.x == 1:
+            x += OFFSET * 2
+
         pygame.draw.rect(self.screen,
-                         # Might not be the intended way of using the cursor color, but this WFN
                          CURSOR_SELECTED_COLOR if self.selector.selected else CURSOR_COLOR,
-                         pygame.Rect((MARGIN + CARDWIDTH) * self.cursor.x,
-                         y,
-                         CARDWIDTH,
-                         CARDHEIGHT + OFFSET * (self.cursor.cards - 1)),
+                         pygame.Rect(x,
+                                     y,
+                                     CARDWIDTH,
+                                     CARDHEIGHT + OFFSET * (self.cursor.cards - 1)),
                          2)
 
 def init_game():
