@@ -22,6 +22,42 @@ class Card:
     def __repr__(self):
         return "%s %s Hidden: %s" % (self.suit, self.value, self.hidden)
 
+class RowStack:
+    def __init__(self):
+        self.cards = []
+
+    def add(self, cards):
+        if self.accept(cards[0]):
+            self.cards.extend(cards)
+            return True
+
+    def accept(self, card):
+        last = self.cards[-1] if len(self.cards) > 0 else None
+        return (not last and card.value == 13 or
+                last and
+                not last.hidden and
+                last.suit % 2 != card.suit % 2 and
+                last.value == card.value+1)
+
+class GoalStack:
+    def __init__(self):
+        self.cards = []
+        self.suit = None
+
+    def add(self, card):
+        if self.accept(card):
+            self.cards.append(card)
+
+    def accept(self, card):
+        if not self.suit:
+            self.suit = card.suit
+            return True
+        else:
+            return (len(self.cards) == 0 and
+                    card.value == 1 or
+                    self.cards[-1].suit == card.suit and
+                    self.cards[-1].value == card.value-1)
+
 class Deck:
     def __init__(self):
         cards = []
@@ -30,13 +66,15 @@ class Deck:
                 cards.append(Card(suit, value))
         shuffle(cards)
 
-        self.rows = [[] for i in range(7)]
+        self.rows = [RowStack() for _ in range(7)]
         for i in range(7):
             for j in range(i, 7):
-                self.rows[j].append(cards.pop(0))
+                self.rows[j].cards.append(cards.pop(0))
 
-        for i in self.rows:
-            i[-1].hidden = False
+        for row in self.rows:
+            row.cards[-1].hidden = False
+
+        self.goals = [GoalStack() for _ in range(4)]
 
         self.deck = cards
         self.showing = []
@@ -53,7 +91,7 @@ class Deck:
             self.deck = self.showed
             self.showed = []
 
-    def cards_in_stack(self, stack):
+    def stack(self, stack):
         return self.rows[stack]
 
 class Cursor:
@@ -78,9 +116,6 @@ class Solitaire:
         self.selector = Selecter()
         self.reset()
 
-    def cards_in_stack(self):
-        return self.deck.cards_in_stack(self.cursor.x)
-
     def draw(self):
         self.screen.blit(self.backside, (0, 0))
         if self.deck.showing:
@@ -96,7 +131,7 @@ class Solitaire:
 
         for i, r in enumerate(self.deck.rows):
             y = 0
-            for c in r:
+            for c in r.cards:
                 card = self.backside if c.hidden else self.cards[c.suit][c.value - 1]
                 self.screen.blit(card, ((MARGIN + CARDWIDTH) * i, (2 * MARGIN + CARDHEIGHT) + y))
                 y += OFFSET
@@ -128,9 +163,9 @@ class Solitaire:
 
     def up(self):
         if (not self.selector.selected and
-            self.cursor.cards < len(self.cards_in_stack()) and
+            self.cursor.cards < len(self.deck.stack(self.cursor.x).cards) and
             self.cursor.y == 1 and
-            not self.cards_in_stack()[-(self.cursor.cards + 1)].hidden):
+            not self.deck.stack(self.cursor.x).cards[-(self.cursor.cards + 1)].hidden):
             self.cursor.cards += 1
         else:
             if not self.deck.showing and (self.cursor.x == 1 or self.cursor.x == 2):
@@ -143,9 +178,9 @@ class Solitaire:
     def select(self):
         #TODO: Restrictions and make it work for not only between stacks
         if self.selector.selected:
-            selected_cards = self.deck.rows[self.selector.from_stack][-self.selector.cards:]
-            self.deck.rows[self.cursor.x] = self.deck.rows[self.cursor.x] + selected_cards
-            del self.deck.rows[self.selector.from_stack][-self.selector.cards:]
+            selected_cards = self.deck.rows[self.selector.from_stack].cards[-self.selector.cards:]
+            if self.deck.rows[self.cursor.x].add(selected_cards):
+                del self.deck.rows[self.selector.from_stack].cards[-self.selector.cards:]
         else:
             self.selector.from_stack = self.cursor.x
             self.selector.cards = self.cursor.cards
@@ -158,7 +193,7 @@ class Solitaire:
     def draw_cursor(self):
         y = self.cursor.y * (2 * MARGIN + CARDHEIGHT)
         if self.cursor.y == 1:
-            y += OFFSET * max(len(self.cards_in_stack()) - self.cursor.cards, 0)
+            y += OFFSET * max(len(self.deck.stack(self.cursor.x).cards) - self.cursor.cards, 0)
 
         x = self.cursor.x * (MARGIN + CARDWIDTH)
         if self.cursor.y == 0 and self.cursor.x == 1:
@@ -175,7 +210,7 @@ class Solitaire:
 def init_game():
     cards = [[pygame.image.load(path.join('cards', '{0:02d}'.format(value) + suit + ".gif"))
             for value in range(1, 14)]
-            for suit in ['c', 'd', 'h', 's']]
+            for suit in ['c', 'd', 's', 'h']]
     backside = pygame.image.load(path.join('cards', 'back192.gif'))
     bottom = pygame.image.load(path.join('cards', 'bottom01-n.gif'))
     pygame.init()
