@@ -127,7 +127,8 @@ class Solitaire:
         self.cursor.y = 1
 
     def move_up(self):
-        if self.cursor.cards < self.cards_in_stack() and self.cursor.y == 1:
+        if (not self.selector.selected and
+            self.cursor.cards < self.cards_in_stack() and self.cursor.y == 1):
             self.cursor.cards += 1
         else:
             if not self.deck.showing and (self.cursor.x == 1 or self.cursor.x == 2):
