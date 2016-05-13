@@ -78,7 +78,6 @@ class Solitaire:
         self.selector = Selecter()
         self.reset()
 
-
     def cards_in_stack(self):
         return self.deck.cards_in_stack(self.cursor.x)
 
@@ -105,14 +104,18 @@ class Solitaire:
         self.draw_cursor()
 
     def move_right(self):
-        if self.cursor.x == 1 and self.cursor.y == 0:
+        if self.cursor.x == 0 and self.cursor.y == 0 and not self.deck.showing:
+            self.cursor.x = 3
+        elif self.cursor.x == 1 and self.cursor.y == 0:
             self.cursor.x = 3
         else:
             self.cursor.x = min(self.cursor.x + 1, 6)
         self.cursor.cards = 1
 
     def move_left(self):
-        if self.cursor.x == 3 and self.cursor.y == 0:
+        if self.cursor.x == 3 and self.cursor.y == 0 and not self.deck.showing:
+            self.cursor.x = 0
+        elif self.cursor.x == 3 and self.cursor.y == 0:
             self.cursor.x = 1
         else:
             self.cursor.x = max(self.cursor.x - 1, 0)
@@ -127,7 +130,9 @@ class Solitaire:
         if self.cursor.cards < self.cards_in_stack() and self.cursor.y == 1:
             self.cursor.cards += 1
         else:
-            if self.cursor.x == 2: # The gap between the main deck and the four goal piles
+            if not self.deck.showing and (self.cursor.x == 1 or self.cursor.x == 2):
+                self.cursor.x = 0
+            elif self.cursor.x == 2: # The gap between the main deck and the four goal piles
                 self.cursor.x = 1
             self.cursor.y = 0
             self.cursor.cards = 1
@@ -198,7 +203,6 @@ def init_game():
                 solitaire.select()
             background.fill((0, 130, 0))
 
-            solitaire.deck.deal()
             solitaire.draw()
 
             screen.blit(background, (0, 0))
