@@ -57,6 +57,7 @@ class Cursor:
     def __init__(self, x, y):
         self.x = x
         self.y = y
+        self.cards = 1
 
 
 class Solitaire:
@@ -108,11 +109,19 @@ class Solitaire:
             self.cursor.x = max(self.cursor.x - 1, 0)
 
     def move_down(self):
+        if self.cursor.y == 1:
+            self.cursor.cards = max(self.cursor.cards - 1, 1)
+
         self.cursor.y = 1
 
     def move_up(self):
-        if self.cursor.x != 2:
-            self.cursor.y = 0
+
+        if self.cursor.cards < self.cards_in_stack():
+            self.cursor.cards += 1
+        else:
+            if self.cursor.x != 2:
+                self.cursor.y = 0
+            self.cursor.cards = 1
 
     def reset(self):
         self.deck = Deck()
@@ -120,14 +129,14 @@ class Solitaire:
     def draw_cursor(self):
         y = self.cursor.y * (2 * MARGIN + CARDHEIGHT)
         if self.cursor.y: # == 1
-            y += OFFSET * (self.cards_in_stack() - 1)
+            y += OFFSET * (self.cards_in_stack() - self.cursor.cards)
 
         pygame.draw.rect(self.screen,
                          CURSOR_COLOR,
                          pygame.Rect((MARGIN + CARDWIDTH) * self.cursor.x,
                          y,
                          CARDWIDTH,
-                         CARDHEIGHT),
+                         CARDHEIGHT + OFFSET * (self.cursor.cards - 1)),
                          2)
 
 def init_game():
