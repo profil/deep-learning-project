@@ -231,7 +231,7 @@ class Solitaire:
 
         x = cursor.x * (MARGIN + CARDWIDTH)
         if cursor.y == 0 and cursor.x == 1:
-            x += OFFSET * 2
+            x += OFFSET * (len(self.deck.showing) - 1)
 
         pygame.draw.rect(self.screen,
                          color,
