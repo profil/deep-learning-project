@@ -121,6 +121,7 @@ class Solitaire:
         self.bottom = bottom
         self.cursor = Cursor(0, 0)
         self.selected = None
+        self.score = 0
         self.reset()
 
     def draw(self):
@@ -203,9 +204,15 @@ class Solitaire:
             if self.cursor.y == 0 and len(selected_cards) == 1:
                 if self.deck.goals[self.cursor.x - 3].add(selected_cards[0]):
                     del self.selected.cards[-self.selected.nCards:]
+                    self.score += 10
             else:
                 if self.deck.rows[self.cursor.x].add(selected_cards):
                     del self.selected.cards[-self.selected.nCards:]
+                    if self.selected.cards == self.deck.showing:
+                        self.score += 5
+                    elif self.selected.cards == self.deck.goals[self.selected.x - 3].cards:
+                        self.score -= 15
+                        if self.score < 0: self.score = 0
 
             self.selected = None
         else:
@@ -215,6 +222,7 @@ class Solitaire:
             if cards:
                 if cards[-1].hidden:
                     cards[-1].hidden = False
+                    self.score += 5
                 else:
                     self.selected = Selected(self.cursor.x,
                                              self.cursor.y,
