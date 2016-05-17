@@ -3,6 +3,7 @@ import pygame
 from os import path
 from random import shuffle
 from pygame.locals import *
+import numpy as np
 
 CARDWIDTH = 73
 CARDHEIGHT = 97
@@ -12,6 +13,7 @@ WIDTH = (MARGIN + CARDWIDTH) * 7 - MARGIN
 HEIGHT = (7 + 14) * OFFSET + 2 * (MARGIN + CARDHEIGHT) - 3
 CURSOR_COLOR = pygame.Color(0, 0, 255)
 CURSOR_SELECTED_COLOR = pygame.Color(255, 0, 255)
+SIZE = 250
 
 class Card:
     def __init__(self, suit, value, hidden=True):
@@ -256,17 +258,18 @@ def init_game():
     backside = pygame.image.load(path.join('cards', 'back192.gif'))
     bottom = pygame.image.load(path.join('cards', 'bottom01-n.gif'))
     pygame.init()
-    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    screen = pygame.display.set_mode((SIZE, SIZE))
 
-    background = pygame.Surface(screen.get_size())
+    background = pygame.Surface((WIDTH, HEIGHT))
     background = background.convert()
     background.fill((0, 130, 0))
 
     solitaire = Solitaire(background, cards, backside, bottom)
     solitaire.draw()
 
-    screen.blit(background, (0, 0))
-    pygame.display.update()
+    asd = pygame.transform.smoothscale(background, (SIZE, SIZE))
+    screen.blit(asd, (0, 0))
+    pygame.display.flip()
 
     while 1:
         event = pygame.event.wait()
@@ -284,8 +287,8 @@ def init_game():
             background.fill((0, 130, 0))
 
             solitaire.draw()
-
-            screen.blit(background, (0, 0))
+            asd = pygame.transform.smoothscale(background, (SIZE, SIZE))
+            screen.blit(asd, (0, 0))
             pygame.display.update()
         elif event.type == pygame.QUIT:
             pygame.quit()
