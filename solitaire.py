@@ -116,25 +116,31 @@ class Selected:
         self.cards = cards
 
 class Solitaire:
-    def __init__(self, screen, cards, backside, bottom):
-        self.screen = screen
-        self.cards = cards
-        self.backside = backside
-        self.bottom = bottom
-        self.cursor = Cursor(0, 0)
-        self.selected = None
-        self.score = 0
+    def __init__(self):
+        self.cards = [[pygame.image.load(path.join('cards', '{0:02d}'.format(value) + suit + ".gif"))
+                for value in range(1, 14)]
+                for suit in ['c', 'd', 's', 'h']]
+        self.backside = pygame.image.load(path.join('cards', 'back192.gif'))
+        self.bottom = pygame.image.load(path.join('cards', 'bottom01-n.gif'))
+        pygame.init()
+        self.screen = pygame.display.set_mode((SIZE, SIZE))
+
         self.reset()
 
+        background = pygame.Surface((WIDTH, HEIGHT))
+        self.background = background.convert()
+        self.step()
+
+
     def draw(self):
-        self.screen.blit(self.backside, (0, 0))
+        self.background.blit(self.backside, (0, 0))
         if self.deck.showing:
             x = 0
             for c in self.deck.showing:
-                self.screen.blit(self.cards[c.suit][c.value - 1], ((MARGIN + CARDWIDTH) + x, 0))
+                self.background.blit(self.cards[c.suit][c.value - 1], ((MARGIN + CARDWIDTH) + x, 0))
                 x += OFFSET
         else:
-            self.screen.blit(self.bottom, (MARGIN + CARDWIDTH, 0))
+            self.background.blit(self.bottom, (MARGIN + CARDWIDTH, 0))
 
         for i, s in enumerate(self.deck.goals):
             if s.cards:
@@ -142,13 +148,13 @@ class Solitaire:
                 img = self.cards[card.suit][card.value - 1]
             else:
                 img = self.bottom
-            self.screen.blit(img, ((MARGIN + CARDWIDTH) * (i + 3), 0))
+            self.background.blit(img, ((MARGIN + CARDWIDTH) * (i + 3), 0))
 
         for i, r in enumerate(self.deck.rows):
             y = 0
             for c in r.cards:
                 card = self.backside if c.hidden else self.cards[c.suit][c.value - 1]
-                self.screen.blit(card, ((MARGIN + CARDWIDTH) * i, (2 * MARGIN + CARDHEIGHT) + y))
+                self.background.blit(card, ((MARGIN + CARDWIDTH) * i, (2 * MARGIN + CARDHEIGHT) + y))
                 y += OFFSET
 
         if(self.selected): self.draw_cursor(self.selected, CURSOR_SELECTED_COLOR)
@@ -232,6 +238,9 @@ class Solitaire:
                                              cards)
 
     def reset(self):
+        self.cursor = Cursor(0, 0)
+        self.selected = None
+        self.score = 0
         self.deck = Deck()
 
     def draw_cursor(self, cursor, color=CURSOR_COLOR):
@@ -243,59 +252,58 @@ class Solitaire:
         if cursor.y == 0 and cursor.x == 1:
             x += OFFSET * (len(self.deck.showing) - 1)
 
-        pygame.draw.rect(self.screen,
+        pygame.draw.rect(self.background,
                          color,
                          pygame.Rect(x,
                                      y,
                                      CARDWIDTH,
                                      CARDHEIGHT + OFFSET * (cursor.nCards - 1)),
                          3)
+    def step(self, action=None):
+        if not action:
+            pass
+        elif action == 'up':
+            self.up()
+        elif action == 'down':
+            self.down()
+        elif action == 'left':
+            self.left()
+        elif action == 'right':
+            self.right()
+        elif action == 'select':
+            self.select()
 
-def init_game():
-    cards = [[pygame.image.load(path.join('cards', '{0:02d}'.format(value) + suit + ".gif"))
-            for value in range(1, 14)]
-            for suit in ['c', 'd', 's', 'h']]
-    backside = pygame.image.load(path.join('cards', 'back192.gif'))
-    bottom = pygame.image.load(path.join('cards', 'bottom01-n.gif'))
-    pygame.init()
-    screen = pygame.display.set_mode((SIZE, SIZE))
+        self.background.fill((0, 130, 0))
+        self.draw()
+        asd = pygame.transform.smoothscale(self.background, (SIZE, SIZE))
+        self.screen.blit(asd, (0, 0))
+        pygame.display.flip()
 
-    background = pygame.Surface((WIDTH, HEIGHT))
-    background = background.convert()
-    background.fill((0, 130, 0))
+        image = pygame.surfarray.array3d(self.screen)
+        return image
 
-    solitaire = Solitaire(background, cards, backside, bottom)
-    solitaire.draw()
+    def play(self):
+        while 1:
+            event = pygame.event.wait()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_LEFT:
+                    self.step('left')
+                elif event.key == pygame.K_RIGHT:
+                    self.step('right')
+                elif event.key == pygame.K_UP:
+                    self.step('up')
+                elif event.key == pygame.K_DOWN:
+                    self.step('down')
+                elif event.key == pygame.K_SPACE:
+                    self.step('select')
+            elif event.type == pygame.QUIT:
+                pygame.quit()
+                exit()
 
-    asd = pygame.transform.smoothscale(background, (SIZE, SIZE))
-    screen.blit(asd, (0, 0))
-    pygame.display.flip()
-
-    while 1:
-        event = pygame.event.wait()
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_LEFT:
-                solitaire.left()
-            elif event.key == pygame.K_RIGHT:
-                solitaire.right()
-            elif event.key == pygame.K_UP:
-                solitaire.up()
-            elif event.key == pygame.K_DOWN:
-                solitaire.down()
-            elif event.key == pygame.K_SPACE:
-                solitaire.select()
-            background.fill((0, 130, 0))
-
-            solitaire.draw()
-            asd = pygame.transform.smoothscale(background, (SIZE, SIZE))
-            screen.blit(asd, (0, 0))
-            pygame.display.update()
-        elif event.type == pygame.QUIT:
-            pygame.quit()
-            exit()
 
 def main():
-    init_game()
+    sol = Solitaire()
+    sol.play()
 
 if __name__ == '__main__':
     main()
