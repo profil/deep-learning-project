@@ -7,8 +7,8 @@ from solitaire import Solitaire
 from collections import deque
 
 ACTIONS = ['select', 'up', 'down', 'left', 'right']
-REPLAY_MEMORY = 500000
-OBSERVE = 5000
+REPLAY_MEMORY = 40000 # 250*250*3*40000 is almost 8GB
+OBSERVE = 30000
 
 def weight(shape):
     return tf.Variable(tf.truncated_normal(shape, stddev=0.1))
