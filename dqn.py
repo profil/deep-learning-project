@@ -74,8 +74,8 @@ def train(x, output):
 
     t = 0
     while True:
-        output_t = output.eval({x: [x_t]})[0]
         action_t = np.zeros([5])
+        output_t = None
 
         # Sometimes (according to the exploration_rate)
         # pick an entirely random action instead of the
@@ -83,6 +83,7 @@ def train(x, output):
         if random.random() <= exploration_rate:
             action_idx = random.randrange(5)
         else:
+            output_t = output.eval({x: [x_t]})[0]
             action_idx = np.argmax(output_t)
         action_t[action_idx] = 1
 
