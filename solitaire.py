@@ -260,6 +260,7 @@ class Solitaire:
                                      CARDHEIGHT + OFFSET * (cursor.nCards - 1)),
                          3)
     def step(self, action=None):
+        score = self.score
         if not action:
             pass
         elif action == 'up':
@@ -280,7 +281,7 @@ class Solitaire:
         pygame.display.flip()
 
         image = pygame.surfarray.array3d(self.screen)
-        return image
+        return image, score-self.score
 
     def play(self):
         while 1:
