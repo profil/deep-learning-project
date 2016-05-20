@@ -212,7 +212,8 @@ class Solitaire:
             if self.cursor.y == 0 and len(selected_cards) == 1:
                 if self.deck.goals[self.cursor.x - 3].add(selected_cards[0]):
                     del self.selected.cards[-self.selected.nCards:]
-                    self.score += 10
+                    if self.selected.cards != self.deck.goals[self.selected.x - 3].cards:
+                        self.score += 10
             else:
                 if self.deck.rows[self.cursor.x].add(selected_cards):
                     del self.selected.cards[-self.selected.nCards:]
