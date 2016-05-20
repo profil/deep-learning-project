@@ -80,7 +80,7 @@ def train(x, output):
         # Sometimes (according to the exploration_rate)
         # pick an entirely random action instead of the
         # best prediction.
-        if random.random() <= exploration_rate and t < OBSERVE:
+        if random.random() <= exploration_rate or t < OBSERVE:
             action_idx = random.randrange(5)
         else:
             output_t = output.eval({x: [x_t]})[0]
