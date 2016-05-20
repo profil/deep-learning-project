@@ -116,14 +116,14 @@ class Selected:
         self.cards = cards
 
 class Solitaire:
-    def __init__(self):
+    def __init__(self, size=SIZE):
         self.cards = [[pygame.image.load(path.join('cards', '{0:02d}'.format(value) + suit + ".gif"))
                 for value in range(1, 14)]
                 for suit in ['c', 'd', 's', 'h']]
         self.backside = pygame.image.load(path.join('cards', 'back192.gif'))
         self.bottom = pygame.image.load(path.join('cards', 'bottom01-n.gif'))
         pygame.init()
-        self.screen = pygame.display.set_mode((SIZE, SIZE))
+        self.screen = pygame.display.set_mode((size, size))
 
         self.reset()
 
@@ -289,22 +289,27 @@ class Solitaire:
             event = pygame.event.wait()
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_LEFT:
-                    self.step('left')
+                    self.left()
                 elif event.key == pygame.K_RIGHT:
-                    self.step('right')
+                    self.right()
                 elif event.key == pygame.K_UP:
-                    self.step('up')
+                    self.up()
                 elif event.key == pygame.K_DOWN:
-                    self.step('down')
+                    self.down()
                 elif event.key == pygame.K_SPACE:
-                    self.step('select')
+                    self.select()
             elif event.type == pygame.QUIT:
                 pygame.quit()
                 exit()
 
+            self.background.fill((0, 130, 0))
+            self.draw()
+            self.screen.blit(self.background, (0, 0))
+            pygame.display.flip()
+
 
 def main():
-    sol = Solitaire()
+    sol = Solitaire(WIDTH)
     sol.play()
 
 if __name__ == '__main__':

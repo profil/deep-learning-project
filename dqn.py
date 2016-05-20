@@ -74,7 +74,7 @@ def train(x, output):
 
     t = 0
     while True:
-        output_t = output.eval({x: [x_t]})
+        output_t = output.eval({x: [x_t]})[0]
         action_t = np.zeros([5])
 
         # Sometimes (according to the exploration_rate)
@@ -88,7 +88,7 @@ def train(x, output):
 
         # decay exploration_rate
         if t > OBSERVE and exploration_rate > 0.05:
-            exploration_rate -= 0.001
+            exploration_rate -= 0.00002
 
         # Next state and reward
         x_new, r_new = sol.step(ACTIONS[action_idx])
