@@ -8,7 +8,7 @@ from collections import deque
 
 ACTIONS = ['select', 'up', 'down', 'left', 'right']
 REPLAY_MEMORY = 500000
-OBSERVE = 500
+OBSERVE = 5000
 
 def weight(shape):
     return tf.Variable(tf.truncated_normal(shape, stddev=0.1))
@@ -126,6 +126,7 @@ def train(x, output):
         # save weights
         if t % 10000 == 0:
             saver.save(sess, 'saved_networks/network', global_step = t)
+        print t, exploration_rate, ACTIONS[action_idx], r_t, np.max(output_t)
 
 
 def main():
