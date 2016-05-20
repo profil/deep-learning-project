@@ -7,7 +7,7 @@ from solitaire import Solitaire
 from collections import deque
 
 ACTIONS = ['select', 'up', 'down', 'left', 'right']
-REPLAY_MEMORY = 40000 # 250*250*3*40000 is almost 8GB
+REPLAY_MEMORY = 35000 # 250*250*3*40000 is almost 8GB
 OBSERVE = 30000
 
 def weight(shape):
@@ -80,7 +80,7 @@ def train(x, output):
         # Sometimes (according to the exploration_rate)
         # pick an entirely random action instead of the
         # best prediction.
-        if random.random() <= exploration_rate:
+        if random.random() <= exploration_rate and t < OBSERVE:
             action_idx = random.randrange(5)
         else:
             output_t = output.eval({x: [x_t]})[0]
