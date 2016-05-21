@@ -60,9 +60,6 @@ def train(x, output):
 
     D = deque()
 
-    x_t, r_t = sol.step()
-    exploration_rate = 1.0
-
     saver = tf.train.Saver()
     sess.run(tf.initialize_all_variables())
     checkpoint = tf.train.get_checkpoint_state("saved_networks")
@@ -72,62 +69,70 @@ def train(x, output):
     else:
         print "Could not find old network weights"
 
-    t = 0
+    episode = 0
     while True:
-        action_t = np.zeros([5])
-        output_t = None
+        sol.reset()
+        x_t, r_t = sol.step()
+        exploration_rate = 1.0
 
-        # Sometimes (according to the exploration_rate)
-        # pick an entirely random action instead of the
-        # best prediction.
-        if random.random() <= exploration_rate or t < OBSERVE:
-            action_idx = random.randrange(5)
-        else:
-            output_t = output.eval({x: [x_t]})[0]
-            action_idx = np.argmax(output_t)
-        action_t[action_idx] = 1
+        t = 0
+        while t < 50000:
+            action_t = np.zeros([5])
+            output_t = None
 
-        # decay exploration_rate
-        if t > OBSERVE and exploration_rate > 0.05:
-            exploration_rate -= 0.00002
+            # Sometimes (according to the exploration_rate)
+            # pick an entirely random action instead of the
+            # best prediction.
+            if random.random() <= exploration_rate or t < OBSERVE:
+                action_idx = random.randrange(5)
+            else:
+                output_t = output.eval({x: [x_t]})[0]
+                action_idx = np.argmax(output_t)
+            action_t[action_idx] = 1
 
-        # Next state and reward
-        x_new, r_new = sol.step(ACTIONS[action_idx])
-        terminal = False # TODO
+            # decay exploration_rate
+            if t > OBSERVE and exploration_rate > 0.05:
+                exploration_rate -= 0.000025
 
-        D.append((x_t, r_new, action_t, x_new, terminal))
-        if len(D) > REPLAY_MEMORY:
-            D.popleft()
+            # Next state and reward
+            x_new, r_new = sol.step(ACTIONS[action_idx])
+            terminal = False # TODO
 
-        # restart game if over
-        if terminal:
-            sol.reset()
+            D.append((x_t, r_new, action_t, x_new, terminal))
+            if len(D) > REPLAY_MEMORY:
+                D.popleft()
 
-        # defer training until we got some data
-        if t > OBSERVE:
-            # Randomize the minibatch from replay memory
-            minibatch = random.sample(D, 32)
-            [x_js, r_news, action_ts, x_news, terminals] = zip(*minibatch)
-            output_news = output.eval({x : x_news})
-            ys = []
-            for i in xrange(len(minibatch)):
-                if terminals[i]:
-                    ys.append(r_news[i])
-                else:
-                    ys.append(r_news[i] + 0.99 * np.max(output_news[i]))
+            # restart game if over
+            if terminal:
+                sol.reset()
 
-            optimizer.run({x: x_js, y: ys, action: action_ts})
+            # defer training until we got some data
+            if t > OBSERVE:
+                # Randomize the minibatch from replay memory
+                minibatch = random.sample(D, 32)
+                [x_js, r_news, action_ts, x_news, terminals] = zip(*minibatch)
+                output_news = output.eval({x : x_news})
+                ys = []
+                for i in xrange(len(minibatch)):
+                    if terminals[i]:
+                        ys.append(r_news[i])
+                    else:
+                        ys.append(r_news[i] + 0.99 * np.max(output_news[i]))
+
+                optimizer.run({x: x_js, y: ys, action: action_ts})
 
 
-        # Save new values and increment the iteration counter
-        x_t = x_new
-        r_t = r_new
-        t += 1
+            # Save new values and increment the iteration counter
+            x_t = x_new
+            r_t = r_new
+            t += 1
 
-        # save weights
-        if t % 10000 == 0:
-            saver.save(sess, 'saved_networks/network', global_step = t)
-        print t, exploration_rate, ACTIONS[action_idx], r_t, np.max(output_t)
+            # save weights
+            if t % 10000 == 0:
+                saver.save(sess, 'saved_networks/network', global_step = t)
+            print('{:>8} {:>8} {:>8} {:>7} {:>2} {:>8}'.format(*[episode, t, exploration_rate, ACTIONS[action_idx], r_t, np.max(output_t)]))
+
+        episode += 1
 
 
 def main():
