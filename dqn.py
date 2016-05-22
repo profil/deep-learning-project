@@ -8,7 +8,7 @@ from collections import deque
 
 ACTIONS = ['select', 'up', 'down', 'left', 'right']
 REPLAY_MEMORY = 35000 # 250*250*3*40000 is almost 8GB
-OBSERVE = 30000
+OBSERVE = 20000
 
 def weight(shape):
     return tf.Variable(tf.truncated_normal(shape, stddev=0.1))
@@ -23,10 +23,10 @@ def createNet():
     Wconv2 = weight([7, 7, 32, 64])
     bconv2 = bias([64])
 
-    Wconv3 = weight([4, 4, 64, 64])
+    Wconv3 = weight([5, 5, 64, 64])
     bconv3 = bias([64])
 
-    Wfc1 = weight([1600, 512])
+    Wfc1 = weight([2304, 512])
     bfc1 = bias([512])
 
     Wfc2 = weight([512, 5])
@@ -35,15 +35,18 @@ def createNet():
 
     x = tf.placeholder("float", [None, 250, 250, 3])
 
-    hconv1 = tf.nn.relu(tf.nn.conv2d(x, Wconv1, [1, 5, 5, 1], "SAME") + bconv1)
+    hconv1 = tf.nn.relu(tf.nn.conv2d(x, Wconv1, [1, 5, 5, 1], "VALID") + bconv1)
 
-    hconv2 = tf.nn.relu(tf.nn.conv2d(hconv1, Wconv2, [1, 5, 5, 1], "SAME") + bconv2)
+    hconv2 = tf.nn.relu(tf.nn.conv2d(hconv1, Wconv2, [1, 3, 3, 1], "VALID") + bconv2)
 
-    hconv3 = tf.nn.relu(tf.nn.conv2d(hconv2, Wconv3, [1, 2, 2, 1], "SAME") + bconv3)
+    hconv3 = tf.nn.relu(tf.nn.conv2d(hconv2, Wconv3, [1, 2, 2, 1], "VALID") + bconv3)
 
-    hfc1 = tf.nn.relu(tf.matmul(tf.reshape(hconv3, [-1, 1600]), Wfc1) + bfc1)
+    hfc1 = tf.nn.relu(tf.matmul(tf.reshape(hconv3, [-1, 2304]), Wfc1) + bfc1)
 
     output = tf.matmul(hfc1, Wfc2) + bfc2
+
+    tf.image_summary('conv1', tf.transpose(hconv1, [3, 1, 2, 0]), 32)
+    tf.image_summary('weights', tf.transpose(Wconv1, [3, 1, 2, 0]), 32)
 
     return x, output
 
@@ -69,11 +72,15 @@ def train(x, output):
     else:
         print "Could not find old network weights"
 
+    summary_op = tf.merge_all_summaries()
+    summary_writer = tf.train.SummaryWriter('summaries/', sess.graph)
+
     episode = 0
     while True:
         sol.reset()
         x_t, r_t = sol.step()
         exploration_rate = 1.0
+        summary_writer.add_summary(sess.run(summary_op, {x: [x_t]}), global_step = episode)
 
         t = 0
         while t < 50000:

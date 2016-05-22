@@ -282,7 +282,7 @@ class Solitaire:
         pygame.display.flip()
 
         image = pygame.surfarray.array3d(self.screen)
-        return image, self.score-score
+        return np.transpose(image, (1, 0, 2)), self.score-score
 
     def play(self):
         while 1:
