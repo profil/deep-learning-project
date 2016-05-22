@@ -46,7 +46,7 @@ def createNet():
     output = tf.matmul(hfc1, Wfc2) + bfc2
 
     tf.image_summary('conv1', tf.transpose(hconv1, [3, 1, 2, 0]), 32)
-    tf.image_summary('weights', tf.transpose(Wconv1, [3, 1, 2, 0]), 32)
+    tf.image_summary('weights', tf.transpose(Wconv1, [3, 0, 1, 2]), 32)
 
     return x, output
 
