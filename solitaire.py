@@ -13,7 +13,7 @@ WIDTH = (MARGIN + CARDWIDTH) * 7 - MARGIN
 HEIGHT = (7 + 14) * OFFSET + 2 * (MARGIN + CARDHEIGHT) - 3
 CURSOR_COLOR = pygame.Color(0, 0, 255)
 CURSOR_SELECTED_COLOR = pygame.Color(255, 0, 255)
-SIZE = 250
+SIZE = 100
 
 class Card:
     def __init__(self, suit, value, hidden=True):

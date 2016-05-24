@@ -17,13 +17,13 @@ def bias(shape):
     return tf.Variable(tf.constant(0.1, shape=shape))
 
 def createNet():
-    Wconv1 = weight([10, 10, 3, 32])
+    Wconv1 = weight([7, 7, 3, 32])
     bconv1 = bias([32])
 
-    Wconv2 = weight([7, 7, 32, 64])
+    Wconv2 = weight([6, 6, 32, 64])
     bconv2 = bias([64])
 
-    Wconv3 = weight([5, 5, 64, 64])
+    Wconv3 = weight([4, 4, 64, 64])
     bconv3 = bias([64])
 
     Wfc1 = weight([2304, 512])
@@ -33,11 +33,11 @@ def createNet():
     bfc2 = bias([5])
 
 
-    x = tf.placeholder("float", [None, 250, 250, 3])
+    x = tf.placeholder("float", [None, 100, 100, 3])
 
-    hconv1 = tf.nn.relu(tf.nn.conv2d(x, Wconv1, [1, 5, 5, 1], "VALID") + bconv1)
+    hconv1 = tf.nn.relu(tf.nn.conv2d(x, Wconv1, [1, 3, 3, 1], "VALID") + bconv1)
 
-    hconv2 = tf.nn.relu(tf.nn.conv2d(hconv1, Wconv2, [1, 3, 3, 1], "VALID") + bconv2)
+    hconv2 = tf.nn.relu(tf.nn.conv2d(hconv1, Wconv2, [1, 2, 2, 1], "VALID") + bconv2)
 
     hconv3 = tf.nn.relu(tf.nn.conv2d(hconv2, Wconv3, [1, 2, 2, 1], "VALID") + bconv3)
 
