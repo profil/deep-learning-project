@@ -16,7 +16,7 @@ def weight(shape):
 def bias(shape):
     return tf.Variable(tf.constant(0.1, shape=shape))
 
-def createNet():
+def createConv():
     Wconv1 = weight([7, 7, 3, 32])
     bconv1 = bias([32])
 
@@ -26,13 +26,6 @@ def createNet():
     Wconv3 = weight([4, 4, 64, 64])
     bconv3 = bias([64])
 
-    Wfc1 = weight([2304, 512])
-    bfc1 = bias([512])
-
-    Wfc2 = weight([512, 5])
-    bfc2 = bias([5])
-
-
     x = tf.placeholder("float", [None, 100, 100, 3])
 
     hconv1 = tf.nn.relu(tf.nn.conv2d(x, Wconv1, [1, 3, 3, 1], "VALID") + bconv1)
@@ -41,15 +34,84 @@ def createNet():
 
     hconv3 = tf.nn.relu(tf.nn.conv2d(hconv2, Wconv3, [1, 2, 2, 1], "VALID") + bconv3)
 
+    tf.image_summary('conv1', tf.transpose(hconv1, [3, 1, 2, 0]), 32)
+    tf.image_summary('weights', tf.transpose(Wconv1, [3, 0, 1, 2]), 32)
+
+    return x, hconv3
+
+def createFCsoftmax(hconv3):
+    Wfc1 = weight([2304, 512])
+    bfc1 = bias([512])
+
+    Wfc2 = weight([512, 7*52])
+    bfc2 = bias([7*52])
+
+    hfc1 = tf.nn.relu(tf.matmul(tf.reshape(hconv3, [-1, 2304]), Wfc1) + bfc1)
+
+    split_Wfc2 = tf.split(1, 7, Wfc2)
+    split_bfc2 = tf.split(0, 7, bfc2)
+    stacks = [tf.nn.softmax(tf.matmul(hfc1, W) + b) for W,b in zip(split_Wfc2, split_bfc2)]
+    output = tf.concat(1, stacks)
+
+    return output
+
+
+def createFC(hconv3):
+    Wfc1 = weight([2304, 512])
+    bfc1 = bias([512])
+
+    Wfc2 = weight([512, 5])
+    bfc2 = bias([5])
+
     hfc1 = tf.nn.relu(tf.matmul(tf.reshape(hconv3, [-1, 2304]), Wfc1) + bfc1)
 
     output = tf.matmul(hfc1, Wfc2) + bfc2
 
-    tf.image_summary('conv1', tf.transpose(hconv1, [3, 1, 2, 0]), 32)
-    tf.image_summary('weights', tf.transpose(Wconv1, [3, 0, 1, 2]), 32)
+    return output
 
-    return x, output
+def train_cards(x, output):
+    sol = Solitaire()
+    sess = tf.InteractiveSession()
+    y = tf.placeholder("float", [None, 7*52])
+    cross_entropy = tf.reduce_mean(-tf.reduce_sum(y * output, 1))
+    optimizer = tf.train.RMSPropOptimizer(1e-5).minimize(cross_entropy)
 
+    saver = tf.train.Saver()
+    sess.run(tf.initialize_all_variables())
+    checkpoint = tf.train.get_checkpoint_state("saved_cards_networks")
+    if checkpoint and checkpoint.model_checkpoint_path:
+        saver.restore(sess, checkpoint.model_checkpoint_path)
+        print "Successfully loaded:", checkpoint.model_checkpoint_path
+    else:
+        print "Could not find old network weights"
+
+    summary_op = tf.merge_all_summaries()
+    summary_writer = tf.train.SummaryWriter('summaries_cards/', sess.graph)
+
+    t = 0
+    while True:
+        b = 0
+        batch = []
+        while b < 32:
+            sol.reset()
+            x_t, r_t = sol.step()
+            ys = []
+            for row in sol.deck.rows:
+                card = row.cards[-1]
+                v = np.zeros(52)
+                v[card.suit * 13 + card.value - 1] = 1
+                ys.extend(v)
+            batch.append((x_t, ys))
+            b += 1
+
+        t += 1
+        [xs, ys] = zip(*batch)
+        optimizer.run({x: xs, y: ys})
+        output_t = output.eval({x: [xs[0]], y: [ys[0]]})[0]
+        if t % 10000 == 0:
+            saver.save(sess, 'saved_cards_networks/network', global_step = t)
+	    summary_writer.add_summary(sess.run(summary_op, {x: xs, y: ys}), global_step = t)
+        print(t)
 
 def train(x, output):
     sol = Solitaire()
@@ -143,8 +205,11 @@ def train(x, output):
 
 
 def main():
-    x, output = createNet()
-    train(x, output)
+    x, hconv3 = createConv()
+    #output = createFC(hconv3)
+    #train(x, output)
+    output = createFCsoftmax(hconv3)
+    train_cards(x, output)
 
 if __name__ == "__main__":
     main()
