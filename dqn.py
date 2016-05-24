@@ -110,7 +110,7 @@ def train_cards(x, output):
         output_t = output.eval({x: [xs[0]], y: [ys[0]]})[0]
         if t % 10000 == 0:
             saver.save(sess, 'saved_cards_networks/network', global_step = t)
-	    summary_writer.add_summary(sess.run(summary_op, {x: xs, y: ys}), global_step = t)
+	    summary_writer.add_summary(sess.run(summary_op, {x: [xs[0]], y: [ys[0]]}), global_step = t)
         print(t)
 
 def train(x, output):
