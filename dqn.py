@@ -48,10 +48,11 @@ def createFCsoftmax(hconv3):
 
     hfc1 = tf.nn.relu(tf.matmul(tf.reshape(hconv3, [-1, 2304]), Wfc1) + bfc1)
 
-    split_Wfc2 = tf.split(1, 7, Wfc2)
-    split_bfc2 = tf.split(0, 7, bfc2)
-    stacks = [tf.nn.softmax(tf.matmul(hfc1, W) + b) for W,b in zip(split_Wfc2, split_bfc2)]
-    output = tf.concat(1, stacks)
+#    split_Wfc2 = tf.split(1, 7, Wfc2)
+#    split_bfc2 = tf.split(0, 7, bfc2)
+#    stacks = [tf.nn.softmax(tf.matmul(hfc1, W) + b) for W,b in zip(split_Wfc2, split_bfc2)]
+#    output = tf.concat(1, stacks)
+    output = tf.matmul(hfc1, Wfc2) + bfc2
 
     return output
 
@@ -73,8 +74,12 @@ def train_cards(x, output):
     sol = Solitaire()
     sess = tf.InteractiveSession()
     y = tf.placeholder("float", [None, 7*52])
-    cross_entropy = tf.reduce_mean(-tf.reduce_sum(y * output, 1))
-    optimizer = tf.train.RMSPropOptimizer(1e-5).minimize(cross_entropy)
+    #cross_entropy = tf.reduce_mean(-tf.reduce_sum(y * output, 1))
+    split_output = tf.split(1, 7, output)
+    split_y = tf.split(1, 7, y)
+    cross_entropy_split = [tf.nn.softmax_cross_entropy_with_logits(a, b) for a, b in zip(split_output, split_y)]
+    cross_entropy = tf.concat(0, cross_entropy_split)
+    optimizer = tf.train.RMSPropOptimizer(1e-4).minimize(cross_entropy)
 
     saver = tf.train.Saver()
     sess.run(tf.initialize_all_variables())
@@ -100,8 +105,8 @@ def train_cards(x, output):
                 card = row.cards[-1]
                 v = np.zeros(52)
                 v[card.suit * 13 + card.value - 1] = 1
-                ys.extend(v)
-            batch.append((x_t, ys))
+                ys.append(v)
+            batch.append((x_t, np.concatenate(ys)))
             b += 1
 
         t += 1
@@ -111,7 +116,7 @@ def train_cards(x, output):
         if t % 10000 == 0:
             saver.save(sess, 'saved_cards_networks/network', global_step = t)
 	    summary_writer.add_summary(sess.run(summary_op, {x: [xs[0]], y: [ys[0]]}), global_step = t)
-        print(t)
+        print('{:>8} {} {} {:>10}'.format(*[t, np.argmax(np.split(output_t, 7), 1) , np.argmax(np.split(ys[0], 7), 1), sess.run(cross_entropy, {x: [xs[0]], y: [ys[0]]})[0]]))
 
 def train(x, output):
     sol = Solitaire()
