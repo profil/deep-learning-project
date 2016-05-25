@@ -43,8 +43,8 @@ def createFCsoftmax(hconv3):
     Wfc1 = weight([2304, 512])
     bfc1 = bias([512])
 
-    Wfc2 = weight([512, 7*52])
-    bfc2 = bias([7*52])
+    Wfc2 = weight([512, 52])
+    bfc2 = bias([52])
 
     hfc1 = tf.nn.relu(tf.matmul(tf.reshape(hconv3, [-1, 2304]), Wfc1) + bfc1)
 
@@ -73,12 +73,8 @@ def createFC(hconv3):
 def train_cards(x, output):
     sol = Solitaire()
     sess = tf.InteractiveSession()
-    y = tf.placeholder(tf.int64, [None, 7])
-    #cross_entropy = tf.reduce_mean(-tf.reduce_sum(y * output, 1))
-    split_output = tf.split(1, 7, output)
-    split_y = tf.split(1, 7, y)
-    cross_entropy_split = [tf.nn.sparse_softmax_cross_entropy_with_logits(a, tf.reshape(b, [-1])) for a, b in zip(split_output, split_y)]
-    cross_entropy = tf.concat(0, cross_entropy_split)
+    y = tf.placeholder(tf.int64, [None])
+    cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(output, y)
     optimizer = tf.train.RMSPropOptimizer(1e-4).minimize(cross_entropy)
 
     saver = tf.train.Saver()
@@ -100,11 +96,9 @@ def train_cards(x, output):
         while b < 32:
             sol.reset()
             x_t, r_t = sol.step()
-            ys = []
-            for row in sol.deck.rows:
-                card = row.cards[-1]
-                ys.append(card.suit * 13 + card.value - 1)
-            batch.append((x_t, ys))
+            card = sol.deck.rows[0].cards[-1]
+            value = card.suit * 13 + card.value - 1
+            batch.append((x_t, value))
             b += 1
 
         t += 1
@@ -114,7 +108,7 @@ def train_cards(x, output):
         if t % 10000 == 0:
             saver.save(sess, 'saved_cards_networks/network', global_step = t)
 	    summary_writer.add_summary(sess.run(summary_op, {x: [xs[0]], y: [ys[0]]}), global_step = t)
-        print('{:>8} {} {} {:>10}'.format(*[t, np.argmax(np.split(output_t, 7), 1) , ys[0], sess.run(cross_entropy, {x: [xs[0]], y: [ys[0]]})[0]]))
+        print('{:>8} {:>2} {:>2} {:>10}'.format(*[t, np.argmax(output_t) , ys[0], sess.run(cross_entropy, {x: [xs[0]], y: [ys[0]]})[0]]))
 
 def train(x, output):
     sol = Solitaire()
