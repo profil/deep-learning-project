@@ -94,15 +94,17 @@ def train_cards(x, output):
         b = 0
         batch = []
         while b < 32:
-            sol.reset()
-            x_t, r_t = sol.step()
-            card = sol.deck.rows[0].cards[-1]
+            if b % 6 == 0:
+                sol.reset()
+                x_t, r_t = sol.step('down')
+            card = sol.deck.rows[b%6].cards[-1]
             value = card.suit * 13 + card.value - 1
             batch.append((x_t, value))
             b += 1
+            x_t, r_t = sol.step('right')
 
         t += 1
-        [xs, ys] = zip(*batch)
+        [xs, ys] = zip(*(random.sample(batch, 32)))
         optimizer.run({x: xs, y: ys})
         output_t = output.eval({x: [xs[0]], y: [ys[0]]})[0]
         if t % 10000 == 0:
