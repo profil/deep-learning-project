@@ -73,11 +73,11 @@ def createFC(hconv3):
 def train_cards(x, output):
     sol = Solitaire()
     sess = tf.InteractiveSession()
-    y = tf.placeholder("float", [None, 7*52])
+    y = tf.placeholder(tf.int64, [None, 7])
     #cross_entropy = tf.reduce_mean(-tf.reduce_sum(y * output, 1))
     split_output = tf.split(1, 7, output)
     split_y = tf.split(1, 7, y)
-    cross_entropy_split = [tf.nn.softmax_cross_entropy_with_logits(a, b) for a, b in zip(split_output, split_y)]
+    cross_entropy_split = [tf.nn.sparse_softmax_cross_entropy_with_logits(a, tf.reshape(b, [-1])) for a, b in zip(split_output, split_y)]
     cross_entropy = tf.concat(0, cross_entropy_split)
     optimizer = tf.train.RMSPropOptimizer(1e-4).minimize(cross_entropy)
 
@@ -103,10 +103,8 @@ def train_cards(x, output):
             ys = []
             for row in sol.deck.rows:
                 card = row.cards[-1]
-                v = np.zeros(52)
-                v[card.suit * 13 + card.value - 1] = 1
-                ys.append(v)
-            batch.append((x_t, np.concatenate(ys)))
+                ys.append(card.suit * 13 + card.value - 1)
+            batch.append((x_t, ys))
             b += 1
 
         t += 1
@@ -116,7 +114,7 @@ def train_cards(x, output):
         if t % 10000 == 0:
             saver.save(sess, 'saved_cards_networks/network', global_step = t)
 	    summary_writer.add_summary(sess.run(summary_op, {x: [xs[0]], y: [ys[0]]}), global_step = t)
-        print('{:>8} {} {} {:>10}'.format(*[t, np.argmax(np.split(output_t, 7), 1) , np.argmax(np.split(ys[0], 7), 1), sess.run(cross_entropy, {x: [xs[0]], y: [ys[0]]})[0]]))
+        print('{:>8} {} {} {:>10}'.format(*[t, np.argmax(np.split(output_t, 7), 1) , ys[0], sess.run(cross_entropy, {x: [xs[0]], y: [ys[0]]})[0]]))
 
 def train(x, output):
     sol = Solitaire()
