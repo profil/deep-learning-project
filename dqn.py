@@ -103,12 +103,12 @@ def train_cards(x, output, conv_saver, fc_saver):
         while b < 32:
             if b % a == 0:
                 sol.reset()
-                x_t, r_t = sol.step('down')
+                x_t, r_t, terminal = sol.step('down')
             card = sol.deck.rows[b % a].cards[-1]
             value = card.suit * 13 + card.value - 1
             batch.append((x_t, value))
             b += 1
-            x_t, r_t = sol.step('right')
+            x_t, r_t, terminal = sol.step('right')
 
         t += 1
         [xs, ys] = zip(*(random.sample(batch, 32)))
@@ -153,7 +153,7 @@ def train(x, output):
     episode = 0
     while True:
         sol.reset()
-        x_t, r_t = sol.step()
+        x_t, r_t, terminal = sol.step()
         exploration_rate = 1.0
         summary_writer.add_summary(sess.run(summary_op, {x: [x_t]}), global_step = episode)
 
@@ -177,8 +177,7 @@ def train(x, output):
                 exploration_rate -= 0.000025
 
             # Next state and reward
-            x_new, r_new = sol.step(ACTIONS[action_idx])
-            terminal = False # TODO
+            x_new, r_new, terminal = sol.step(ACTIONS[action_idx])
 
             D.append((x_t, r_new, action_t, x_new, terminal))
             if len(D) > REPLAY_MEMORY:

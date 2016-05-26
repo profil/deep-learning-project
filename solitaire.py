@@ -217,7 +217,7 @@ class Solitaire:
             else:
                 if self.deck.rows[self.cursor.x].add(selected_cards):
                     del self.selected.cards[-self.selected.nCards:]
-                    if self.selected.cards == self.deck.showing:
+                    if self.selected.cards and self.selected.cards == self.deck.showing:
                         self.score += 5
                     elif self.selected.cards == self.deck.goals[self.selected.x - 3].cards:
                         self.score -= 15
@@ -244,6 +244,8 @@ class Solitaire:
         self.score = 0
         self.deck = Deck()
         self.last_move = ()
+        self.last_score = 0
+        self.fails = 0
 
     def draw_cursor(self, cursor, color=CURSOR_COLOR):
         y = cursor.y * (2 * MARGIN + CARDHEIGHT)
@@ -263,7 +265,11 @@ class Solitaire:
                          5)
     def step(self, action=None):
         score = self.score
-        if not action:
+        terminal = False
+
+        if self.fails >= 20:
+            terminal = True
+        elif not action:
             pass
         elif action == 'up':
             self.up()
@@ -283,7 +289,7 @@ class Solitaire:
         pygame.display.flip()
 
         image = pygame.surfarray.array3d(self.screen)
-        return np.transpose(image, (1, 0, 2)), self.score-score
+        return np.transpose(image, (1, 0, 2)), self.score-score, terminal
 
     def play(self):
         while 1:
@@ -363,7 +369,7 @@ class Solitaire:
                                 card = self.deck.rows[i].cards[n]
                                 if rr.accept(card):
                                     nCards = len(self.deck.rows[i].cards) - n
-                                    if self.last_move == (self.cursor.x, self.cursor.y, self.cursor.nCards):
+                                    if self.last_move == (i, 1):
                                         continue
                                     return self.botmove(i, 1, nCards)
         return self.botmove(0, 0, 1)
@@ -382,7 +388,12 @@ class Solitaire:
                 if self.cursor.nCards < nCards:
                     return 'up'
                 else:
-                    self.last_move = (x, y, nCards)
+                    self.last_move = (x, y)
+                    if self.last_score == self.score:
+                        self.fails += 1
+                    else:
+                        self.fails = 0
+                    self.last_score = self.score
                     return 'select'
 def main():
     sol = Solitaire(WIDTH)
