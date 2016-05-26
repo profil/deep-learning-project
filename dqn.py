@@ -37,7 +37,8 @@ def createConv():
     tf.image_summary('conv1', tf.transpose(hconv1, [3, 1, 2, 0]), 32)
     tf.image_summary('weights', tf.transpose(Wconv1, [3, 0, 1, 2]), 32)
 
-    return x, hconv3
+    saver = tf.train.Saver([Wconv1, bconv1, Wconv2, bconv2, Wconv3, bconv3])
+    return x, hconv3, saver
 
 def createFCsoftmax(hconv3):
     Wfc1 = weight([2304, 512])
@@ -48,13 +49,11 @@ def createFCsoftmax(hconv3):
 
     hfc1 = tf.nn.relu(tf.matmul(tf.reshape(hconv3, [-1, 2304]), Wfc1) + bfc1)
 
-#    split_Wfc2 = tf.split(1, 7, Wfc2)
-#    split_bfc2 = tf.split(0, 7, bfc2)
-#    stacks = [tf.nn.softmax(tf.matmul(hfc1, W) + b) for W,b in zip(split_Wfc2, split_bfc2)]
-#    output = tf.concat(1, stacks)
     output = tf.matmul(hfc1, Wfc2) + bfc2
 
-    return output
+    saver = tf.train.Saver([Wfc1, bfc1, Wfc2, bfc2])
+
+    return output, saver
 
 
 def createFC(hconv3):
@@ -70,34 +69,42 @@ def createFC(hconv3):
 
     return output
 
-def train_cards(x, output):
+def train_cards(x, output, conv_saver, fc_saver):
     sol = Solitaire()
     sess = tf.InteractiveSession()
     y = tf.placeholder(tf.int64, [None])
     cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(output, y)
-    optimizer = tf.train.RMSPropOptimizer(1e-4).minimize(cross_entropy)
+    optimizer = tf.train.RMSPropOptimizer(1e-6).minimize(cross_entropy)
 
-    saver = tf.train.Saver()
     sess.run(tf.initialize_all_variables())
-    checkpoint = tf.train.get_checkpoint_state("saved_cards_networks")
+
+    checkpoint = tf.train.get_checkpoint_state("conv_weights")
     if checkpoint and checkpoint.model_checkpoint_path:
-        saver.restore(sess, checkpoint.model_checkpoint_path)
+        conv_saver.restore(sess, checkpoint.model_checkpoint_path)
         print "Successfully loaded:", checkpoint.model_checkpoint_path
     else:
-        print "Could not find old network weights"
+        print "Could not find old conv weights"
+
+    checkpoint = tf.train.get_checkpoint_state("fc_weights")
+    if checkpoint and checkpoint.model_checkpoint_path:
+        fc_saver.restore(sess, checkpoint.model_checkpoint_path)
+        print "Successfully loaded:", checkpoint.model_checkpoint_path
+    else:
+        print "Could not find old fc weights"
 
     summary_op = tf.merge_all_summaries()
     summary_writer = tf.train.SummaryWriter('summaries_cards/', sess.graph)
 
     t = 0
+    a = 5
     while True:
         b = 0
         batch = []
         while b < 32:
-            if b % 6 == 0:
+            if b % a == 0:
                 sol.reset()
                 x_t, r_t = sol.step('down')
-            card = sol.deck.rows[b%6].cards[-1]
+            card = sol.deck.rows[b % a].cards[-1]
             value = card.suit * 13 + card.value - 1
             batch.append((x_t, value))
             b += 1
@@ -106,11 +113,18 @@ def train_cards(x, output):
         t += 1
         [xs, ys] = zip(*(random.sample(batch, 32)))
         optimizer.run({x: xs, y: ys})
-        output_t = output.eval({x: [xs[0]], y: [ys[0]]})[0]
+
+        if t % 3000 == 0:
+            a += 1
+            if a > 7:
+                a = 5
         if t % 10000 == 0:
-            saver.save(sess, 'saved_cards_networks/network', global_step = t)
+            conv_saver.save(sess, 'conv_weights/saved', global_step = t)
+            fc_saver.save(sess, 'fc_weights/saved', global_step = t)
 	    summary_writer.add_summary(sess.run(summary_op, {x: [xs[0]], y: [ys[0]]}), global_step = t)
-        print('{:>8} {:>2} {:>2} {:>10}'.format(*[t, np.argmax(output_t) , ys[0], sess.run(cross_entropy, {x: [xs[0]], y: [ys[0]]})[0]]))
+        if t % 10 == 0:
+            output_t = output.eval({x: [xs[0]], y: [ys[0]]})[0]
+            print('{:>8} {:>1} {:>2} {:>2} {:>8.8}'.format(*[t, a, np.argmax(output_t) , ys[0], sess.run(cross_entropy, {x: [xs[0]], y: [ys[0]]})[0]]))
 
 def train(x, output):
     sol = Solitaire()
@@ -204,11 +218,11 @@ def train(x, output):
 
 
 def main():
-    x, hconv3 = createConv()
+    x, hconv3, conv_saver = createConv()
     #output = createFC(hconv3)
     #train(x, output)
-    output = createFCsoftmax(hconv3)
-    train_cards(x, output)
+    output, fc_saver = createFCsoftmax(hconv3)
+    train_cards(x, output, conv_saver, fc_saver)
 
 if __name__ == "__main__":
     main()
