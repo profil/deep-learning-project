@@ -259,7 +259,7 @@ class Solitaire:
                                      y,
                                      CARDWIDTH,
                                      CARDHEIGHT + OFFSET * (cursor.nCards - 1)),
-                         3)
+                         5)
     def step(self, action=None):
         score = self.score
         if not action:
