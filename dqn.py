@@ -7,7 +7,7 @@ from solitaire import Solitaire
 from collections import deque
 
 ACTIONS = ['select', 'up', 'down', 'left', 'right']
-REPLAY_MEMORY = 35000 # 250*250*3*40000 is almost 8GB
+REPLAY_MEMORY = 200000 # 250*250*3*40000 is almost 8GB
 OBSERVE = 20000
 
 def weight(shape):
@@ -186,6 +186,7 @@ def train(x, output):
             # restart game if over
             if terminal:
                 sol.reset()
+                episode += 1
 
             # defer training until we got some data
             if t > OBSERVE:
