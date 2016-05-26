@@ -243,6 +243,7 @@ class Solitaire:
         self.selected = None
         self.score = 0
         self.deck = Deck()
+        self.last_move = ()
 
     def draw_cursor(self, cursor, color=CURSOR_COLOR):
         y = cursor.y * (2 * MARGIN + CARDHEIGHT)
@@ -298,6 +299,18 @@ class Solitaire:
                     self.down()
                 elif event.key == pygame.K_SPACE:
                     self.select()
+                elif event.key == pygame.K_RETURN:
+                    s = self.bot()
+                    if s == 'left':
+                        self.left()
+                    elif s == 'right':
+                        self.right()
+                    elif s == 'down':
+                        self.down()
+                    elif s == 'up':
+                        self.up()
+                    elif s == 'select':
+                        self.select()
             elif event.type == pygame.QUIT:
                 pygame.quit()
                 exit()
@@ -307,7 +320,70 @@ class Solitaire:
             self.screen.blit(self.background, (0, 0))
             pygame.display.flip()
 
+    def bot(self):
+        if self.selected:
+            if self.selected.nCards == 1: # Move selected card to goal
+                card = self.selected.cards[-self.selected.nCards]
+                for i, g in enumerate(self.deck.goals):
+                    if g.accept(card):
+                        return self.botmove(3 + i, 0 , 1)
+                for i, r in enumerate(self.deck.rows):
+                    if r.accept(card):
+                        return self.botmove(i, 1, 1)
+            else: # Move selected cards to other stack
+                card = self.selected.cards[-self.selected.nCards]
+                for i, r in enumerate(self.deck.rows):
+                    if r.accept(card):
+                        return self.botmove(i, 1, 1)
+        else:
+            for i, r in enumerate(self.deck.rows):
+                if self.deck.rows[i].cards:
+                    if self.deck.rows[i].cards[-1].hidden:
+                        return self.botmove(i, 1, 1)
+            for i, r in enumerate(self.deck.rows):
+                for j, g in enumerate(self.deck.goals):
+                    if self.deck.rows[i].cards:
+                        card = self.deck.rows[i].cards[-1]
+                        if g.accept(card):
+                            return self.botmove(i, 1, 1)
+            if self.deck.showing:
+                card = self.deck.showing[-1]
+                for i, r in enumerate(self.deck.rows):
+                    if r.accept(card):
+                        return self.botmove(1, 0, 1)
+                for i, g in enumerate(self.deck.goals):
+                    if g.accept(card):
+                        return self.botmove(1, 0, 1)
+            for i, r in enumerate(self.deck.rows):
+                if self.deck.rows[i].cards:
+                    for n, c in enumerate(self.deck.rows[i].cards):
+                        if not c.hidden:
+                            for j, rr in enumerate(self.deck.rows):
+                                if j == i: continue
+                                card = self.deck.rows[i].cards[n]
+                                if rr.accept(card):
+                                    nCards = len(self.deck.rows[i].cards) - n
+                                    if self.last_move == (self.cursor.x, self.cursor.y, self.cursor.nCards):
+                                        continue
+                                    return self.botmove(i, 1, nCards)
+        return self.botmove(0, 0, 1)
 
+    def botmove(self, x, y, nCards):
+        if self.cursor.y < y:
+            return 'down'
+        elif self.cursor.y > y:
+            return 'up'
+        else:
+            if self.cursor.x < x:
+                return 'right'
+            elif self.cursor.x > x:
+                return 'left'
+            else:
+                if self.cursor.nCards < nCards:
+                    return 'up'
+                else:
+                    self.last_move = (x, y, nCards)
+                    return 'select'
 def main():
     sol = Solitaire(WIDTH)
     sol.play()
