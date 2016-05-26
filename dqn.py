@@ -166,7 +166,7 @@ def train(x, output):
             # pick an entirely random action instead of the
             # best prediction.
             if random.random() <= exploration_rate or t < OBSERVE:
-                action_idx = random.randrange(5)
+                action_idx = ACTIONS.index(sol.bot())
             else:
                 output_t = output.eval({x: [x_t]})[0]
                 action_idx = np.argmax(output_t)
@@ -219,10 +219,10 @@ def train(x, output):
 
 def main():
     x, hconv3, conv_saver = createConv()
-    #output = createFC(hconv3)
-    #train(x, output)
-    output, fc_saver = createFCsoftmax(hconv3)
-    train_cards(x, output, conv_saver, fc_saver)
+    output = createFC(hconv3)
+    train(x, output)
+    #output, fc_saver = createFCsoftmax(hconv3)
+    #train_cards(x, output, conv_saver, fc_saver)
 
 if __name__ == "__main__":
     main()
