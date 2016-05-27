@@ -130,11 +130,20 @@ def train(x, output):
     sol = Solitaire()
     sess = tf.InteractiveSession()
 
+    episode = 1
+    loss_avg = 0
+    loss_total = 0
+    output_avg = 0
+    output_total = 0
+
     action = tf.placeholder(tf.float32, [None, 5])
     y = tf.placeholder(tf.float32, [None])
     output_action = tf.reduce_sum(tf.mul(output, action), 1)
     loss = tf.reduce_mean(tf.square(tf.clip_by_value(y - output_action, -1, 1)))
     optimizer = tf.train.RMSPropOptimizer(1e-6).minimize(loss)
+
+    tf.scalar_summary('average/loss', loss_avg)
+    tf.scalar_summary('average/output', output_avg)
 
     D = deque()
 
@@ -150,11 +159,6 @@ def train(x, output):
     summary_op = tf.merge_all_summaries()
     summary_writer = tf.train.SummaryWriter('summaries/', sess.graph)
 
-    episode = 1
-    loss_avg = 0
-    loss_total = 0
-    output_avg = 0
-    output_total = 0
     while True:
         sol.reset()
         x_t, r_t, terminal = sol.step()
@@ -178,7 +182,7 @@ def train(x, output):
 
             # decay exploration_rate
             if t > OBSERVE and exploration_rate > 0.05:
-                exploration_rate -= 0.000125
+                exploration_rate -= 0.00005
 
             # Next state and reward
             x_new, r_new, terminal = sol.step(ACTIONS[action_idx])
