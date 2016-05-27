@@ -219,7 +219,7 @@ class Solitaire:
                     del self.selected.cards[-self.selected.nCards:]
                     if self.selected.cards and self.selected.cards == self.deck.showing:
                         self.score += 5
-                    elif self.selected.cards == self.deck.goals[self.selected.x - 3].cards:
+                    elif self.selected.cards and self.selected.cards == self.deck.goals[self.selected.x - 3].cards:
                         self.score -= 15
                         if self.score < 0: self.score = 0
 

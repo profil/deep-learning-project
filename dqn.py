@@ -7,7 +7,7 @@ from solitaire import Solitaire
 from collections import deque
 
 ACTIONS = ['select', 'up', 'down', 'left', 'right']
-REPLAY_MEMORY = 200000 # 250*250*3*40000 is almost 8GB
+REPLAY_MEMORY = 300000
 OBSERVE = 20000
 
 def weight(shape):
@@ -26,7 +26,7 @@ def createConv():
     Wconv3 = weight([4, 4, 64, 64])
     bconv3 = bias([64])
 
-    x = tf.placeholder("float", [None, 100, 100, 3])
+    x = tf.placeholder(tf.float32, [None, 100, 100, 3])
 
     hconv1 = tf.nn.relu(tf.nn.conv2d(x, Wconv1, [1, 3, 3, 1], "VALID") + bconv1)
 
@@ -74,7 +74,7 @@ def train_cards(x, output, conv_saver, fc_saver):
     sess = tf.InteractiveSession()
     y = tf.placeholder(tf.int64, [None])
     cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(output, y)
-    optimizer = tf.train.RMSPropOptimizer(1e-6).minimize(cross_entropy)
+    optimizer = tf.train.RMSPropOptimizer(1e-6, momentum=0.95).minimize(cross_entropy)
 
     sess.run(tf.initialize_all_variables())
 
@@ -130,11 +130,11 @@ def train(x, output):
     sol = Solitaire()
     sess = tf.InteractiveSession()
 
-    action = tf.placeholder("float", [None, 5])
-    y = tf.placeholder("float", [None])
+    action = tf.placeholder(tf.float32, [None, 5])
+    y = tf.placeholder(tf.float32, [None])
     output_action = tf.reduce_sum(tf.mul(output, action), 1)
-    cost = tf.reduce_mean(tf.square(y - output_action))
-    optimizer = tf.train.RMSPropOptimizer(1e-6).minimize(cost)
+    loss = tf.reduce_mean(tf.square(tf.clip_by_value(y - output_action, -1, 1)))
+    optimizer = tf.train.RMSPropOptimizer(1e-6).minimize(loss)
 
     D = deque()
 
@@ -158,7 +158,7 @@ def train(x, output):
         summary_writer.add_summary(sess.run(summary_op, {x: [x_t]}), global_step = episode)
 
         t = 0
-        while t < 50000:
+        while t < 30000:
             action_t = np.zeros([5])
             output_t = None
 
@@ -174,7 +174,7 @@ def train(x, output):
 
             # decay exploration_rate
             if t > OBSERVE and exploration_rate > 0.05:
-                exploration_rate -= 0.000025
+                exploration_rate -= 0.000125
 
             # Next state and reward
             x_new, r_new, terminal = sol.step(ACTIONS[action_idx])
@@ -189,6 +189,8 @@ def train(x, output):
                 episode += 1
 
             # defer training until we got some data
+            loss_avg = 0
+            output_avg = 0
             if t > OBSERVE:
                 # Randomize the minibatch from replay memory
                 minibatch = random.sample(D, 32)
@@ -201,8 +203,12 @@ def train(x, output):
                     else:
                         ys.append(r_news[i] + 0.99 * np.max(output_news[i]))
 
-                optimizer.run({x: x_js, y: ys, action: action_ts})
+                _, loss_t, output_ts = sess.run([optimizer, loss, output], {x: x_js, y: ys, action: action_ts})
+                loss_avg += loss_t
+                output_avg += output_ts.mean()
 
+            loss_avg /= 32
+            output_avg /= 32
 
             # Save new values and increment the iteration counter
             x_t = x_new
@@ -212,7 +218,7 @@ def train(x, output):
             # save weights
             if t % 10000 == 0:
                 saver.save(sess, 'saved_networks/network', global_step = t)
-            print('{:>8} {:>8} {:>8} {:>7} {:>2} {:>8}'.format(*[episode, t, exploration_rate, ACTIONS[action_idx], r_t, np.max(output_t)]))
+            print('{:>5} {:>5} {:<8} {:>6} {:>2} {:<8} {:<8}'.format(*[episode, t, exploration_rate, ACTIONS[action_idx], r_t, loss_avg, output_avg]))
 
         episode += 1
 
