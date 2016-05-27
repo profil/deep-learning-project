@@ -150,14 +150,18 @@ def train(x, output):
     summary_op = tf.merge_all_summaries()
     summary_writer = tf.train.SummaryWriter('summaries/', sess.graph)
 
-    episode = 0
+    episode = 1
+    loss_avg = 0
+    loss_total = 0
+    output_avg = 0
+    output_total = 0
     while True:
         sol.reset()
         x_t, r_t, terminal = sol.step()
         exploration_rate = 1.0
         summary_writer.add_summary(sess.run(summary_op, {x: [x_t]}), global_step = episode)
 
-        t = 0
+        t = 1
         while t < 30000:
             action_t = np.zeros([5])
             output_t = None
@@ -186,11 +190,8 @@ def train(x, output):
             # restart game if over
             if terminal:
                 sol.reset()
-                episode += 1
 
             # defer training until we got some data
-            loss_avg = 0
-            output_avg = 0
             if t > OBSERVE:
                 # Randomize the minibatch from replay memory
                 minibatch = random.sample(D, 32)
@@ -204,11 +205,10 @@ def train(x, output):
                         ys.append(r_news[i] + 0.99 * np.max(output_news[i]))
 
                 _, loss_t, output_ts = sess.run([optimizer, loss, output], {x: x_js, y: ys, action: action_ts})
-                loss_avg += loss_t
-                output_avg += output_ts.mean()
-
-            loss_avg /= 32
-            output_avg /= 32
+                loss_total += loss_t
+                output_total += output_ts.mean()
+                loss_avg = loss_total/ (t * episode - OBSERVE + 1)
+                output_avg = output_total / (t * episode - OBSERVE + 1)
 
             # Save new values and increment the iteration counter
             x_t = x_new
@@ -218,7 +218,7 @@ def train(x, output):
             # save weights
             if t % 10000 == 0:
                 saver.save(sess, 'saved_networks/network', global_step = t)
-            print('{:>5} {:>5} {:<8} {:>6} {:>2} {:<8} {:<8}'.format(*[episode, t, exploration_rate, ACTIONS[action_idx], r_t, loss_avg, output_avg]))
+            print('{:>5} {:>5} {:<8} {:>6} {:>2} {:<8f} {:<8f}'.format(*[episode, t, exploration_rate, ACTIONS[action_idx], r_t, loss_avg, output_avg]))
 
         episode += 1
 
