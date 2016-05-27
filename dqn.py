@@ -130,20 +130,11 @@ def train(x, output):
     sol = Solitaire()
     sess = tf.InteractiveSession()
 
-    episode = 1
-    loss_avg = 0
-    loss_total = 0
-    output_avg = 0
-    output_total = 0
-
     action = tf.placeholder(tf.float32, [None, 5])
     y = tf.placeholder(tf.float32, [None])
     output_action = tf.reduce_sum(tf.mul(output, action), 1)
     loss = tf.reduce_mean(tf.square(tf.clip_by_value(y - output_action, -1, 1)))
     optimizer = tf.train.RMSPropOptimizer(1e-6).minimize(loss)
-
-    tf.scalar_summary('average/loss', loss_avg)
-    tf.scalar_summary('average/output', output_avg)
 
     D = deque()
 
@@ -158,6 +149,16 @@ def train(x, output):
 
     summary_op = tf.merge_all_summaries()
     summary_writer = tf.train.SummaryWriter('summaries/', sess.graph)
+
+    episode = 1
+    loss_avg = 0
+    loss_total = 0
+    output_avg = 0
+    output_total = 0
+
+    summary_loss = tf.scalar_summary('average/loss', loss_avg)
+    summary_output = tf.scalar_summary('average/output', output_avg)
+    average_summary_op = tf.merge_summary([summary_loss, summary_output])
 
     while True:
         sol.reset()
@@ -208,11 +209,12 @@ def train(x, output):
                     else:
                         ys.append(r_news[i] + 0.99 * np.max(output_news[i]))
 
-                _, loss_t, output_ts = sess.run([optimizer, loss, output], {x: x_js, y: ys, action: action_ts})
+                _, loss_t, output_ts, summary_str = sess.run([optimizer, loss, output, average_summary_op], {x: x_js, y: ys, action: action_ts})
                 loss_total += loss_t
                 output_total += output_ts.mean()
                 loss_avg = loss_total/ (t * episode - OBSERVE + 1)
                 output_avg = output_total / (t * episode - OBSERVE + 1)
+                summary_writer.add_summary(summary_str)
 
             # Save new values and increment the iteration counter
             x_t = x_new
